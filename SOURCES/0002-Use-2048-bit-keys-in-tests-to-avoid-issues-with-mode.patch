@@ -1,0 +1,40 @@
+From 68e2c532e610e1c91dd10ff176b673d6190adef4 Mon Sep 17 00:00:00 2001
+From: Jakub Hrozek <jakub.hrozek@posteo.se>
+Date: Mon, 6 Aug 2018 21:43:53 +0200
+Subject: [PATCH] Use 2048-bit keys in tests to avoid issues with modern
+ systems
+
+---
+ tests/default_pw_test | 2 +-
+ tests/ldap_test       | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tests/default_pw_test b/tests/default_pw_test
+index 6da406cf3f67cee2084e730361d43c88df83b81c..733c85c090e07c87a9a7ef8b58c5396bf5f91197 100755
+--- a/tests/default_pw_test
++++ b/tests/default_pw_test
+@@ -30,7 +30,7 @@ rm -rf "$workdir"
+ mkdir "$workdir"
+ 
+ # Create a SSL key
+-/usr/bin/openssl req -newkey rsa:1024 -keyout "$workdir"/key1 -nodes \
++/usr/bin/openssl req -newkey rsa:2048 -keyout "$workdir"/key1 -nodes \
+     -x509 -days 2 -out "$workdir"/key3 2>/dev/null <<EOF
+ .
+ .
+diff --git a/tests/ldap_test b/tests/ldap_test
+index f82c2795ef283e323f49c8a400d6c628b3a3e331..54609b14d54b2c5638445262e7fb25307ba6db4c 100755
+--- a/tests/ldap_test
++++ b/tests/ldap_test
+@@ -30,7 +30,7 @@ rm -rf "$workdir"
+ mkdir "$workdir"
+ 
+ # Create a SSL key
+-/usr/bin/openssl req -newkey rsa:1024 -keyout "$workdir"/key1 -nodes \
++/usr/bin/openssl req -newkey rsa:2048 -keyout "$workdir"/key1 -nodes \
+     -x509 -days 2 -out "$workdir"/key3 2>/dev/null <<EOF
+ .
+ .
+-- 
+2.14.4
+
