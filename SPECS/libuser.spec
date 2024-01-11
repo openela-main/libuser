@@ -1,11 +1,12 @@
 Name: libuser
 Version: 0.63
-Release: 12%{?dist}
+Release: 13%{?dist}
 License: LGPLv2+
 URL: https://pagure.io/libuser
 Source: http://releases.pagure.org/libuser/libuser-%{version}.tar.xz
 Patch0001: 0001-man-typo.patch
 Patch0002: 0002-popt-memopy.patch
+Patch0003: 0003-translation.patch
 
 BuildRequires: glib2-devel
 BuildRequires: linuxdoc-tools
@@ -120,6 +121,10 @@ make
 %{_datadir}/gtk-doc/html/*
 
 %changelog
+* Tue Jul 11 2023 Tomas Halman <thalman@redhat.com> - 0.63-13
+- Translation update
+  Resolves: rhbz#2139662
+
 * Thu Nov 10 2022 Tomas Halman <thalman@redhat.com> - 0.63-12
 - correct popt memory handling
 - Fix the manpage
