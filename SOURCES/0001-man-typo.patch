@@ -1,0 +1,19 @@
+commit 9b9d41eeeb037cca047feb93805a08a3e47c3dea
+Author: Andre Boscatto <aboscatt@aboscatt.remote.csb>
+Date:   Fri Apr 1 15:35:01 2022 +0200
+
+    man: Fixing typo in password
+
+diff --git a/apps/lchage.1 b/apps/lchage.1
+index c3dbf40..73cf5e0 100644
+--- a/apps/lchage.1
++++ b/apps/lchage.1
+@@ -72,7 +72,7 @@ Require at least \fIdays\fR days between password changes.
+ Set \fIdays\fR to 0 or -1 to disable this requirement.
+ 
+ If this value is larger than the value set by \fB\-\-maxdays\fP,
+-the user cannot change the pasword.
++the user cannot change the password.
+ 
+ .TP
+ \fB\-M\fR, \fB\-\-maxdays\fR=\fIdays\fR
