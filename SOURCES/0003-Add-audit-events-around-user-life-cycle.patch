@@ -1,0 +1,658 @@
+From 72962208c42ea202f1e31f2f3ac1b523cd545b06 Mon Sep 17 00:00:00 2001
+From: Steve Grubb <sgrubb@redhat.com>
+Date: Fri, 3 Aug 2018 11:33:05 +0200
+Subject: [PATCH] Add audit events around user life cycle
+
+---
+ Makefile.am        | 18 ++++++-------
+ apps/lchage.c      |  5 ++++
+ apps/lchsh.c       |  7 +++++
+ apps/lgroupadd.c   |  5 ++++
+ apps/lgroupdel.c   |  6 +++++
+ apps/lgroupmod.c   | 36 +++++++++++++++++++++++++
+ apps/luseradd.c    | 16 +++++++++++
+ apps/luserdel.c    | 17 ++++++++++++
+ apps/lusermod.c    | 38 +++++++++++++++++++++++++-
+ configure.ac       | 17 ++++++++++++
+ lib/common.c       | 66 +++++++++++++++++++++++++++++++++++++++++++++-
+ lib/user_private.h | 15 +++++++++++
+ 12 files changed, 235 insertions(+), 11 deletions(-)
+
+diff --git a/Makefile.am b/Makefile.am
+index 080f97e8cc81a77dd0413c3b6fe7fe8002499393..9f099bd71941a869274a502a3130802731d83c24 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -116,7 +116,7 @@ apps_libapputil_la_LDFLAGS = $(GOBJECT_LIBS) -lpam -lpam_misc $(SELINUX_LIBS)
+ 
+ apps_lchage_CPPFLAGS = $(AM_CPPFLAGS) $(LOCALEDIR_CPPFLAGS)
+ apps_lchage_LDADD = lib/libuser.la $(LTLIBINTL)
+-apps_lchage_LDFLAGS = $(GMODULE_LIBS) -lpopt
++apps_lchage_LDFLAGS = $(GMODULE_LIBS) -lpopt $(AUDIT_LIBS)
+ 
+ apps_lchfn_CPPFLAGS = $(AM_CPPFLAGS) $(LOCALEDIR_CPPFLAGS)
+ apps_lchfn_LDADD = apps/libapputil.la lib/libuser.la $(LTLIBINTL)
+@@ -124,19 +124,19 @@ apps_lchfn_LDFLAGS = $(GMODULE_LIBS) -lpopt
+ 
+ apps_lchsh_CPPFLAGS = $(AM_CPPFLAGS) $(LOCALEDIR_CPPFLAGS)
+ apps_lchsh_LDADD = apps/libapputil.la lib/libuser.la $(LTLIBINTL)
+-apps_lchsh_LDFLAGS = $(GMODULE_LIBS) -lpopt
++apps_lchsh_LDFLAGS = $(GMODULE_LIBS) -lpopt $(AUDIT_LIBS)
+ 
+ apps_lgroupadd_CPPFLAGS = $(AM_CPPFLAGS) $(LOCALEDIR_CPPFLAGS)
+ apps_lgroupadd_LDADD = lib/libuser.la $(LTLIBINTL)
+-apps_lgroupadd_LDFLAGS = $(GMODULE_LIBS) -lpopt
++apps_lgroupadd_LDFLAGS = $(GMODULE_LIBS) -lpopt $(AUDIT_LIBS)
+ 
+ apps_lgroupdel_CPPFLAGS = $(AM_CPPFLAGS) $(LOCALEDIR_CPPFLAGS)
+ apps_lgroupdel_LDADD = lib/libuser.la $(LTLIBINTL)
+-apps_lgroupdel_LDFLAGS = $(GMODULE_LIBS) -lpopt
++apps_lgroupdel_LDFLAGS = $(GMODULE_LIBS) -lpopt $(AUDIT_LIBS)
+ 
+ apps_lgroupmod_CPPFLAGS = $(AM_CPPFLAGS) $(LOCALEDIR_CPPFLAGS)
+ apps_lgroupmod_LDADD = lib/libuser.la $(LTLIBINTL)
+-apps_lgroupmod_LDFLAGS = $(GMODULE_LIBS) -lpopt
++apps_lgroupmod_LDFLAGS = $(GMODULE_LIBS) -lpopt $(AUDIT_LIBS)
+ 
+ apps_lid_CPPFLAGS = $(AM_CPPFLAGS) $(LOCALEDIR_CPPFLAGS)
+ apps_lid_LDADD = lib/libuser.la $(LTLIBINTL)
+@@ -152,15 +152,15 @@ apps_lpasswd_LDFLAGS = $(GMODULE_LIBS) -lpopt
+ 
+ apps_luseradd_CPPFLAGS = $(AM_CPPFLAGS) $(LOCALEDIR_CPPFLAGS)
+ apps_luseradd_LDADD = lib/libuser.la $(LTLIBINTL)
+-apps_luseradd_LDFLAGS = $(GMODULE_LIBS) -lpopt
++apps_luseradd_LDFLAGS = $(GMODULE_LIBS) -lpopt $(AUDIT_LIBS)
+ 
+ apps_luserdel_CPPFLAGS = $(AM_CPPFLAGS) $(LOCALEDIR_CPPFLAGS)
+ apps_luserdel_LDADD = lib/libuser.la $(LTLIBINTL)
+-apps_luserdel_LDFLAGS = $(GMODULE_LIBS) -lpopt
++apps_luserdel_LDFLAGS = $(GMODULE_LIBS) -lpopt $(AUDIT_LIBS)
+ 
+ apps_lusermod_CPPFLAGS = $(AM_CPPFLAGS) $(LOCALEDIR_CPPFLAGS)
+ apps_lusermod_LDADD = lib/libuser.la $(LTLIBINTL)
+-apps_lusermod_LDFLAGS = $(GMODULE_LIBS) -lpopt
++apps_lusermod_LDFLAGS = $(GMODULE_LIBS) -lpopt $(AUDIT_LIBS)
+ 
+ lib_libuser_la_SOURCES = lib/common.c lib/config.c lib/entity.c lib/error.c \
+ 	lib/fs.c lib/getdate.y lib/internal.h lib/misc.c lib/modules.c \
+@@ -170,7 +170,7 @@ lib_libuser_la_CPPFLAGS = $(GMODULE_CFLAGS) -Ilib $(LOCALEDIR_CPPFLAGS) \
+ 	-DMODULEDIR='"$(pkglibdir)"' -DNSCD='"$(NSCD)"' \
+ 	-DSYSCONFDIR='"$(sysconfdir)"'
+ lib_libuser_la_LDFLAGS = $(GMODULE_LIBS) $(CRYPT_LIBS) $(SELINUX_LIBS) \
+-	-version-info 6:2:5
++	$(AUDIT_LIBS) -version-info 6:2:5
+ lib_libuser_la_LIBADD = $(LTLIBINTL)
+ 
+ modules_libuser_files_la_SOURCES = modules/files.c
+diff --git a/apps/lchage.c b/apps/lchage.c
+index bad296ccf0755dd6781b1a2e6397dccb1f7dbd12..1a4f04883062cb11f15a2e34d37e127fef2a374e 100644
+--- a/apps/lchage.c
++++ b/apps/lchage.c
+@@ -29,6 +29,7 @@
+ #include <popt.h>
+ #include <glib.h>
+ #include "../lib/user.h"
++#include "../lib/user_private.h"
+ #include "apputil.h"
+ 
+ #define INVALID_LONG LONG_MIN
+@@ -239,8 +240,12 @@ main(int argc, const char **argv)
+ 			fprintf(stderr,
+ 				_("Failed to modify aging information for %s: "
+ 				  "%s\n"), user, lu_strerror(error));
++			lu_audit_logger(AUDIT_USER_MGMT, "change-age", user,
++				AUDIT_NO_ID, 0);
+ 			return 3;
+ 		}
++		lu_audit_logger(AUDIT_USER_MGMT, "change-age", user,
++				AUDIT_NO_ID, 1);
+ 
+ 		lu_nscd_flush_cache(LU_NSCD_CACHE_PASSWD);
+ 	}
+diff --git a/apps/lchsh.c b/apps/lchsh.c
+index 7c8a9246d4548a7f6fbacce91cdfdf4372799943..555ed2ea7b0d5a90bf37a7f23c398b382ac45a38 100644
+--- a/apps/lchsh.c
++++ b/apps/lchsh.c
+@@ -26,6 +26,7 @@
+ #include <string.h>
+ #include <unistd.h>
+ #include "../lib/user.h"
++#include "../lib/user_private.h"
+ #include "apputil.h"
+ 
+ int
+@@ -120,6 +121,8 @@ main(int argc, const char **argv)
+ 				      NULL, &error) == FALSE) {
+ 			fprintf(stderr, _("Shell not changed: %s\n"),
+ 				lu_strerror(error));
++			lu_audit_logger(AUDIT_USER_MGMT, "change-shell", user,
++				AUDIT_NO_ID, 0);
+ 			return 1;
+ 		}
+ 		/* Modify the in-memory structure's shell attribute. */
+@@ -132,9 +135,13 @@ main(int argc, const char **argv)
+ 		if (lu_user_modify(ctx, ent, &error)) {
+ 			g_print(_("Shell changed.\n"));
+ 			lu_nscd_flush_cache(LU_NSCD_CACHE_PASSWD);
++			lu_audit_logger(AUDIT_USER_MGMT, "change-shell", user,
++				AUDIT_NO_ID, 1);
+ 		} else {
+ 			fprintf(stderr, _("Shell not changed: %s\n"),
+ 				lu_strerror(error));
++			lu_audit_logger(AUDIT_USER_MGMT, "change-shell", user,
++				AUDIT_NO_ID, 0);
+ 			return 1;
+ 		}
+ 	}
+diff --git a/apps/lgroupadd.c b/apps/lgroupadd.c
+index d73ee864adac9e5dbc7d98392190db225d116143..3fa2a1df5ac5838ef256541c07ae6028e4f6a80b 100644
+--- a/apps/lgroupadd.c
++++ b/apps/lgroupadd.c
+@@ -118,6 +118,8 @@ main(int argc, const char **argv)
+ 	if (lu_group_add(ctx, ent, &error) == FALSE) {
+ 		fprintf(stderr, _("Group creation failed: %s\n"),
+ 			lu_strerror(error));
++		lu_audit_logger(AUDIT_ADD_GROUP, "add-group", name,
++				AUDIT_NO_ID, 0);
+ 		return 2;
+ 	}
+ 
+@@ -127,5 +129,8 @@ main(int argc, const char **argv)
+ 
+ 	lu_end(ctx);
+ 
++	lu_audit_logger(AUDIT_ADD_GROUP, "add-group", name,
++				AUDIT_NO_ID, 1);
++
+ 	return 0;
+ }
+diff --git a/apps/lgroupdel.c b/apps/lgroupdel.c
+index e0fd6c6d42f55eef82f0790f551721972c129b5f..c5ccbed95cb834719cd109a81e6f979bb737dc71 100644
+--- a/apps/lgroupdel.c
++++ b/apps/lgroupdel.c
+@@ -24,6 +24,7 @@
+ #include <locale.h>
+ #include <popt.h>
+ #include "../lib/user.h"
++#include "../lib/user_private.h"
+ #include "apputil.h"
+ 
+ int
+@@ -90,6 +91,8 @@ main(int argc, const char **argv)
+ 	if (lu_group_delete(ctx, ent, &error) == FALSE) {
+ 		fprintf(stderr, _("Group %s could not be deleted: %s\n"),
+ 			group, lu_strerror(error));
++		lu_audit_logger(AUDIT_DEL_GROUP, "delete-group", group,
++				AUDIT_NO_ID, 0);
+ 		return 3;
+ 	}
+ 
+@@ -99,5 +102,8 @@ main(int argc, const char **argv)
+ 
+ 	lu_end(ctx);
+ 
++	lu_audit_logger(AUDIT_DEL_GROUP, "delete-group", group,
++			AUDIT_NO_ID, 1);
++
+ 	return 0;
+ }
+diff --git a/apps/lgroupmod.c b/apps/lgroupmod.c
+index 21170e06f37370d7b2f2d936048ae7abf24fd181..0ad0ae4f39d32435b4668ef15ec678d8ea319e5c 100644
+--- a/apps/lgroupmod.c
++++ b/apps/lgroupmod.c
+@@ -138,8 +138,14 @@ main(int argc, const char **argv)
+ 		    == FALSE) {
+ 			fprintf(stderr, _("Failed to set password for group "
+ 				"%s: %s\n"), group, lu_strerror(error));
++			lu_audit_logger(AUDIT_GRP_MGMT,
++					"changing-group-passwd", group,
++					AUDIT_NO_ID, 0);
+ 			return 4;
+ 		}
++		lu_audit_logger(AUDIT_GRP_MGMT,
++				"changing-group-passwd", group,
++				AUDIT_NO_ID, 1);
+ 	}
+ 
+ 	if (cryptedUserPassword) {
+@@ -147,8 +153,14 @@ main(int argc, const char **argv)
+ 				     &error) == FALSE) {
+ 			fprintf(stderr, _("Failed to set password for group "
+ 				"%s: %s\n"), group, lu_strerror(error));
++			lu_audit_logger(AUDIT_GRP_MGMT,
++					"changing-group-passwd", group,
++					AUDIT_NO_ID, 0);
+ 			return 5;
+ 		}
++		lu_audit_logger(AUDIT_GRP_MGMT,
++				"changing-group-passwd", group,
++				AUDIT_NO_ID, 1);
+ 	}
+ 
+ 	if (lock) {
+@@ -156,8 +168,14 @@ main(int argc, const char **argv)
+ 			fprintf(stderr,
+ 				_("Group %s could not be locked: %s\n"), group,
+ 				lu_strerror(error));
++			lu_audit_logger(AUDIT_GRP_MGMT,
++					"changing-group-lock", group,
++					AUDIT_NO_ID, 0);
+ 			return 6;
+ 		}
++		lu_audit_logger(AUDIT_GRP_MGMT,
++				"changing-group-lock", group,
++				AUDIT_NO_ID, 1);
+ 	}
+ 
+ 	if (unlock) {
+@@ -165,8 +183,14 @@ main(int argc, const char **argv)
+ 			fprintf(stderr,
+ 				_("Group %s could not be unlocked: %s\n"),
+ 				group, lu_strerror(error));
++			lu_audit_logger(AUDIT_GRP_MGMT,
++					"changing-group-lock", group,
++					AUDIT_NO_ID, 0);
+ 			return 7;
+ 		}
++		lu_audit_logger(AUDIT_GRP_MGMT,
++				"changing-group-lock", group,
++				AUDIT_NO_ID, 1);
+ 	}
+ 
+ 	change = gid || addAdmins || remAdmins || addMembers || remMembers;
+@@ -241,8 +265,14 @@ main(int argc, const char **argv)
+ 	if (change && lu_group_modify(ctx, ent, &error) == FALSE) {
+ 		fprintf(stderr, _("Group %s could not be modified: %s\n"),
+ 			group, lu_strerror(error));
++		lu_audit_logger(AUDIT_GRP_MGMT,
++				"changing-group-members", group,
++				AUDIT_NO_ID, 0);
+ 		return 8;
+ 	}
++	lu_audit_logger(AUDIT_GRP_MGMT,
++			"changing-group-members", group,
++			AUDIT_NO_ID, 1);
+ 	if (gidNumber != LU_VALUE_INVALID_ID) {
+ 		users = lu_users_enumerate_by_group_full(ctx, gid, &error);
+ 
+@@ -256,8 +286,14 @@ main(int argc, const char **argv)
+ 			fprintf(stderr,
+ 				_("Group %s could not be modified: %s\n"),
+ 				group, lu_strerror(error));
++			lu_audit_logger(AUDIT_GRP_MGMT,
++				"changing-group-id", group,
++				AUDIT_NO_ID, 0);
+ 			return 8;
+ 		}
++		lu_audit_logger(AUDIT_GRP_MGMT,
++			"changing-group-id", group,
++			AUDIT_NO_ID, 1);
+ 	}
+ 
+ 	lu_ent_free(ent);
+diff --git a/apps/luseradd.c b/apps/luseradd.c
+index 7839183c00f892ad50f77f5aed6ada07cd3c125b..9d7f4f10a9c6f849e551f017f05c2e67e4a56259 100644
+--- a/apps/luseradd.c
++++ b/apps/luseradd.c
+@@ -210,8 +210,12 @@ main(int argc, const char **argv)
+ 				lu_error_free(&error);
+ 			}
+ 			lu_end(ctx);
++			lu_audit_logger(AUDIT_ADD_GROUP, "add-group", name,
++					AUDIT_NO_ID, 0);
+ 			return 1;
+ 		}
++		lu_audit_logger(AUDIT_ADD_GROUP, "add-group", name,
++				AUDIT_NO_ID, 1);
+ 	}
+ 
+ 	/* Retrieve the group ID. */
+@@ -259,9 +263,13 @@ main(int argc, const char **argv)
+ 	if (lu_user_add(ctx, ent, &error) == FALSE) {
+ 		fprintf(stderr, _("Account creation failed: %s.\n"),
+ 			lu_strerror(error));
++		lu_audit_logger(AUDIT_ADD_USER, "add-user", name,
++					AUDIT_NO_ID, 0);
++
+ 		return 3;
+ 	}
+         lu_nscd_flush_cache(LU_NSCD_CACHE_PASSWD);
++	lu_audit_logger(AUDIT_ADD_USER, "add-user", name, AUDIT_NO_ID, 1);
+ 
+ 	/* If we don't have the the don't-create-home flag, create the user's
+ 	 * home directory. */
+@@ -282,8 +290,12 @@ main(int argc, const char **argv)
+ 					&error) == FALSE) {
+ 			fprintf(stderr, _("Error creating %s: %s.\n"),
+ 				homeDirectory, lu_strerror(error));
++			lu_audit_logger(AUDIT_USER_MGMT, "add-home-dir", name,
++				uidNumber, 0);
+ 			return 7;
+ 		}
++		lu_audit_logger(AUDIT_USER_MGMT, "add-home-dir", name,
++				uidNumber, 1);
+ 
+ 		/* Create a mail spool for the user. */
+ 		if (lu_mail_spool_create(ctx, ent, &error) != TRUE) {
+@@ -311,8 +323,12 @@ main(int argc, const char **argv)
+ 			fprintf(stderr, _("Error setting password for user "
+ 					  "%s: %s.\n"), name,
+ 				lu_strerror(error));
++			lu_audit_logger(AUDIT_USER_CHAUTHTOK, "updating-password",
++					name, uidNumber, 0);
+ 			return 3;
+ 		}
++		lu_audit_logger(AUDIT_USER_CHAUTHTOK, "updating-password",
++					name, uidNumber, 1);
+ 	}
+ 	lu_nscd_flush_cache(LU_NSCD_CACHE_PASSWD);
+ 
+diff --git a/apps/luserdel.c b/apps/luserdel.c
+index 2f39a4ffb8ae47ac5dc3c84270b54a8ca68c7403..7e20fa7ea9bf4082967bc6931a8557936bfda0a2 100644
+--- a/apps/luserdel.c
++++ b/apps/luserdel.c
+@@ -26,6 +26,7 @@
+ #include <string.h>
+ #include <unistd.h>
+ #include "../lib/user.h"
++#include "../lib/user_private.h"
+ #include "apputil.h"
+ 
+ int
+@@ -93,8 +94,12 @@ main(int argc, const char **argv)
+ 	if (lu_user_delete(ctx, ent, &error) == FALSE) {
+ 		fprintf(stderr, _("User %s could not be deleted: %s.\n"),
+ 			user, lu_strerror(error));
++		lu_audit_logger(AUDIT_DEL_USER, "delete-user", user,
++				AUDIT_NO_ID, 0);
+ 		return 3;
+ 	}
++	lu_audit_logger(AUDIT_DEL_USER, "delete-user", user,
++			AUDIT_NO_ID, 1);
+ 
+ 	lu_nscd_flush_cache(LU_NSCD_CACHE_PASSWD);
+ 
+@@ -126,9 +131,15 @@ main(int argc, const char **argv)
+ 				fprintf(stderr, _("Group %s could not be "
+ 						  "deleted: %s.\n"), tmp,
+ 					lu_strerror(error));
++				lu_audit_logger_with_group (AUDIT_DEL_GROUP,
++					"delete-group", user, AUDIT_NO_ID,
++					tmp, 0);
+ 				return 7;
+ 			}
+ 		}
++		lu_audit_logger_with_group (AUDIT_DEL_GROUP,
++					    "delete-group", user,
++					    AUDIT_NO_ID, tmp, 1);
+ 		lu_ent_free(group_ent);
+ 		lu_nscd_flush_cache(LU_NSCD_CACHE_GROUP);
+ 	}
+@@ -138,8 +149,14 @@ main(int argc, const char **argv)
+ 			fprintf(stderr,
+ 				_("Error removing home directory: %s.\n"),
+ 				lu_strerror(error));
++			lu_audit_logger(AUDIT_USER_MGMT,
++					"deleting-home-directory", user,
++					AUDIT_NO_ID, 0);
+ 			return 9;
+ 		}
++		lu_audit_logger(AUDIT_USER_MGMT, "deleting-home-directory", user,
++				AUDIT_NO_ID, 1);
++
+ 		/* Delete the user's mail spool. */
+ 		if (lu_mail_spool_remove(ctx, ent, &error) != TRUE) {
+ 			fprintf(stderr, _("Error removing mail spool: %s"),
+diff --git a/apps/lusermod.c b/apps/lusermod.c
+index afec147475736f0b814b5e1f30c77064f3915c20..143157f114c93960fb879d9e6e0c1fb914f3ffcb 100644
+--- a/apps/lusermod.c
++++ b/apps/lusermod.c
+@@ -179,8 +179,13 @@ main(int argc, const char **argv)
+ 			fprintf(stderr,
+ 				_("Failed to set password for user %s: %s.\n"),
+ 				user, lu_strerror(error));
++			lu_audit_logger(AUDIT_USER_CHAUTHTOK, 
++					"updating-password", user,
++					uidNumber, 0);
+ 			return 5;
+ 		}
++		lu_audit_logger(AUDIT_USER_CHAUTHTOK, "updating-password",
++				user, uidNumber, 0);
+ 	}
+ 
+ 	/* If we need to change a user's crypted password, try to change it,
+@@ -192,8 +197,13 @@ main(int argc, const char **argv)
+ 			fprintf(stderr,
+ 				_("Failed to set password for user %s: %s.\n"),
+ 				user, lu_strerror(error));
++			lu_audit_logger(AUDIT_USER_CHAUTHTOK, 
++					"updating-password", user,
++					uidNumber, 0);
+ 			return 6;
+ 		}
++		lu_audit_logger(AUDIT_USER_CHAUTHTOK, "updating-password",
++				user, uidNumber, 0);
+ 	}
+ 
+ 	/* If we need to lock/unlock the user's account, do that. */
+@@ -202,16 +212,26 @@ main(int argc, const char **argv)
+ 			fprintf(stderr,
+ 				_("User %s could not be locked: %s.\n"),
+ 				user, lu_strerror(error));
++			lu_audit_logger(AUDIT_USER_CHAUTHTOK, 
++					"locking-account", user,
++					uidNumber, 0);
+ 			return 7;
+ 		}
++		lu_audit_logger(AUDIT_USER_CHAUTHTOK, "locking-account",
++				user, uidNumber, 0);
+ 	}
+ 	if (unlock) {
+ 		if (lu_user_unlock(ctx, ent, &error) == FALSE) {
+ 			fprintf(stderr,
+ 				_("User %s could not be unlocked: %s.\n"),
+ 				user, lu_strerror(error));
++			lu_audit_logger(AUDIT_USER_CHAUTHTOK, 
++					"unlocking-account", user,
++					uidNumber, 0);
+ 			return 8;
+ 		}
++		lu_audit_logger(AUDIT_USER_CHAUTHTOK, "unlocking-account",
++				user, uidNumber, 0);
+ 	}
+ 
+ 	/* Determine if we actually need to change anything. */
+@@ -274,8 +294,13 @@ main(int argc, const char **argv)
+ 	if (change && (lu_user_modify(ctx, ent, &error) == FALSE)) {
+ 		fprintf(stderr, _("User %s could not be modified: %s.\n"),
+ 			user, lu_strerror(error));
++			lu_audit_logger(AUDIT_USER_MGMT, 
++					"modify-account", user,
++					uidNumber, 0);
+ 		return 9;
+ 	}
++	lu_audit_logger(AUDIT_USER_MGMT, "modify-account",
++			user, uidNumber, 1);
+ 	lu_nscd_flush_cache(LU_NSCD_CACHE_PASSWD);
+ 
+ 	/* If the user's name changed, we need to update supplemental
+@@ -322,12 +347,19 @@ main(int argc, const char **argv)
+ 				}
+ 			}
+ 			/* Save the changes to the group. */
+-			if (lu_group_modify(ctx, group, &error) == FALSE)
++			if (lu_group_modify(ctx, group, &error) == FALSE) {
+ 				fprintf(stderr, _("Group %s could not be "
+ 						  "modified: %s.\n"),
+ 					lu_ent_get_first_string(group,
+ 								LU_GROUPNAME),
+ 					lu_strerror(error));
++				lu_audit_logger_with_group(AUDIT_USER_MGMT, 
++						    "update-member-in-group", user, uidNumber,
++						    lu_ent_get_first_string(group, LU_GROUPNAME),0);
++			} else
++				lu_audit_logger_with_group(AUDIT_USER_MGMT, 
++						    "update-member-in-group", user, uidNumber,
++						    lu_ent_get_first_string(group, LU_GROUPNAME),1);
+ 			lu_ent_free(group);
+ 		}
+ 		g_ptr_array_free(groups, TRUE);
+@@ -353,8 +385,12 @@ main(int argc, const char **argv)
+ 			fprintf(stderr, _("Error moving %s to %s: %s.\n"),
+ 				oldHomeDirectory, homeDirectory,
+ 				lu_strerror(error));
++			lu_audit_logger(AUDIT_USER_MGMT, "moving-home-dir",
++					user, uidNumber, 0);
+ 			return 12;
+ 		}
++		lu_audit_logger(AUDIT_USER_MGMT, "moving-home-dir",
++				user, uidNumber, 1);
+ 	}
+ 	g_free(oldHomeDirectory);
+ 
+diff --git a/configure.ac b/configure.ac
+index 3e68b16a1f65ff5e5e3e905c1ffce8993e562176..0bd4a67d4c77fa1b701d74dbeab908a192dbf4d7 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -118,6 +118,23 @@ if test "x$selinux" != xno ; then
+ fi
+ AC_SUBST(SELINUX_LIBS)
+ 
++AC_ARG_WITH(audit,
++AS_HELP_STRING([--with-audit],[log using Linux Audit in addition to syslog]),
++use_audit=$withval,
++use_audit=auto)
++if test x$use_audit != xno ; then
++        AC_SEARCH_LIBS([audit_open], [audit])
++        if test x$ac_cv_search_audit_open = xno ; then
++                if test x$use_audit != xauto ; then
++                        AC_MSG_ERROR([requested Linux Audit, but libaudit was not found])
++                fi
++        else
++                AC_DEFINE(WITH_AUDIT,1,[Define if you want to use Linux Audit.])
++		AUDIT_LIBS=-laudit
++        fi
++fi
++AC_SUBST(AUDIT_LIBS)
++
+ AC_C_CONST
+ AC_TYPE_UID_T
+ AC_TYPE_MODE_T
+diff --git a/lib/common.c b/lib/common.c
+index fc5df7461111908ff3eae59608ce0a51d62e155e..dce7e570ec9c92b56b28f15ab503fb7a641b660e 100644
+--- a/lib/common.c
++++ b/lib/common.c
+@@ -16,9 +16,10 @@
+  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
+  */
+ 
+-#include <config.h>
++#include "config.h"
+ #include <glib.h>
+ #include <string.h>
++#include <stdlib.h>
+ 
+ #include "internal.h"
+ #include "user_private.h"
+@@ -111,3 +112,66 @@ lu_common_sgroup_default(struct lu_module *module,
+ 	g_return_val_if_fail(name != NULL, FALSE);
+ 	return lu_common_group_default(module, name, is_system, ent, error);
+ }
++
++#ifdef WITH_AUDIT
++static int audit_fd = 0;
++
++/* result - 1 is "success" and 0 is "failed" */
++void lu_audit_logger(int type, const char *op, const char *name,
++                        unsigned int id, unsigned int result)
++{
++	if (audit_fd == 0) {
++		/* First time through */
++		audit_fd = audit_open();
++		if (audit_fd < 0) {
++			/* You get these only when the kernel doesn't have
++			 * audit compiled in. */
++			if (	   (errno == EINVAL)
++				|| (errno == EPROTONOSUPPORT)
++				|| (errno == EAFNOSUPPORT))
++					return;
++			fputs("Cannot open audit interface - aborting.\n", stderr);
++			exit(EXIT_FAILURE);
++		}
++	}
++	if (audit_fd < 0)
++		return;
++	audit_log_acct_message(audit_fd, type, NULL, op, name, id,
++		NULL, NULL, NULL, (int) result);
++}
++
++/* result - 1 is "success" and 0 is "failed" */
++void lu_audit_logger_with_group (int type, const char *op, const char *name,
++		unsigned int id, const char *grp, unsigned int result)
++{
++	int len;
++	char enc_group[(LOGIN_NAME_MAX*2)+1], buf[1024];
++
++	if (audit_fd == 0) {
++		/* First time through */
++		audit_fd = audit_open();
++		if (audit_fd < 0) {
++			/* You get these only when the kernel doesn't have
++			 * audit compiled in. */
++			if (	   (errno == EINVAL)
++				|| (errno == EPROTONOSUPPORT)
++				|| (errno == EAFNOSUPPORT))
++					return;
++			fputs("Cannot open audit interface - aborting.\n", stderr);
++			exit(EXIT_FAILURE);
++		}
++	}
++	if (audit_fd < 0)
++		return;
++	len = strnlen(grp, sizeof(enc_group)/2);
++	if (audit_value_needs_encoding(grp, len)) {
++		snprintf(buf, sizeof(buf), "%s grp=%s", op,
++			audit_encode_value(enc_group, grp, len));
++	} else {
++		snprintf(buf, sizeof(buf), "%s grp=\"%s\"", op, grp);
++	}
++	audit_log_acct_message(audit_fd, type, NULL, buf, name, id,
++			NULL, NULL, NULL, (int) result);
++}
++#endif
++
+diff --git a/lib/user_private.h b/lib/user_private.h
+index a4869c138d51519539b6939406cdb0fee23ab7f6..02b813c47ee359db774bb85a2aa7aa12e18d3067 100644
+--- a/lib/user_private.h
++++ b/lib/user_private.h
+@@ -34,6 +34,9 @@
+ #ifdef WITH_SELINUX
+ #include <selinux/selinux.h>
+ #endif
++#ifdef WITH_AUDIT
++#include <libaudit.h>
++#endif
+ #include "user.h"
+ 
+ G_BEGIN_DECLS
+@@ -357,6 +360,18 @@ id_t lu_get_first_unused_id(struct lu_context *ctx, enum lu_entity_type type,
+ /* Append a copy of VALUES to DEST */
+ void lu_util_append_values(GValueArray *dest, GValueArray *values);
+ 
++#ifdef WITH_AUDIT
++void lu_audit_logger(int type, const char *op, const char *name,
++		     unsigned int id, unsigned int result);
++void lu_audit_logger_with_group(int type, const char *op, const char *name,
++				 unsigned int id, const char *grp,
++				 unsigned int result);
++#else
++#define lu_audit_logger(a, b, c, d, e)
++#define lu_audit_logger_with_group(a, b, c, d, e, f)
++#endif
++#define AUDIT_NO_ID	((unsigned int) -1)
++
+ G_END_DECLS
+ 
+ #endif
+-- 
+2.17.1
+

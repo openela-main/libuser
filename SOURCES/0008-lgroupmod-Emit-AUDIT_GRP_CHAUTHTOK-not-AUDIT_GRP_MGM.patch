@@ -1,0 +1,48 @@
+From c6a4e9f596c976f71894269e3168567e6118236c Mon Sep 17 00:00:00 2001
+From: Steve Grubb <sgrubb@redhat.com>
+Date: Wed, 5 Jun 2019 22:16:51 +0200
+Subject: [PATCH] lgroupmod: Emit AUDIT_GRP_CHAUTHTOK, not AUDIT_GRP_MGMT when
+ changing group password
+
+Resolves: https://bugzilla.redhat.com/show_bug.cgi?id=1670997
+---
+ apps/lgroupmod.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/apps/lgroupmod.c b/apps/lgroupmod.c
+index 0ad0ae4..20be85f 100644
+--- a/apps/lgroupmod.c
++++ b/apps/lgroupmod.c
+@@ -138,12 +138,12 @@ main(int argc, const char **argv)
+ 		    == FALSE) {
+ 			fprintf(stderr, _("Failed to set password for group "
+ 				"%s: %s\n"), group, lu_strerror(error));
+-			lu_audit_logger(AUDIT_GRP_MGMT,
++			lu_audit_logger(AUDIT_GRP_CHAUTHTOK,
+ 					"changing-group-passwd", group,
+ 					AUDIT_NO_ID, 0);
+ 			return 4;
+ 		}
+-		lu_audit_logger(AUDIT_GRP_MGMT,
++		lu_audit_logger(AUDIT_GRP_CHAUTHTOK,
+ 				"changing-group-passwd", group,
+ 				AUDIT_NO_ID, 1);
+ 	}
+@@ -153,12 +153,12 @@ main(int argc, const char **argv)
+ 				     &error) == FALSE) {
+ 			fprintf(stderr, _("Failed to set password for group "
+ 				"%s: %s\n"), group, lu_strerror(error));
+-			lu_audit_logger(AUDIT_GRP_MGMT,
++			lu_audit_logger(AUDIT_GRP_CHAUTHTOK,
+ 					"changing-group-passwd", group,
+ 					AUDIT_NO_ID, 0);
+ 			return 5;
+ 		}
+-		lu_audit_logger(AUDIT_GRP_MGMT,
++		lu_audit_logger(AUDIT_GRP_CHAUTHTOK,
+ 				"changing-group-passwd", group,
+ 				AUDIT_NO_ID, 1);
+ 	}
+-- 
+2.20.1
+
