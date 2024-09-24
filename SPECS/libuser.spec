@@ -1,14 +1,14 @@
 Name: libuser
 Version: 0.62
-Release: 25%{?dist}
+Release: 26%{?dist}
 Group: System Environment/Base
 License: LGPLv2+
 URL: https://pagure.io/libuser
 Source: http://releases.pagure.org/libuser/libuser-%{version}.tar.xz
 # https://bugzilla.redhat.com/show_bug.cgi?id=1608321
-Source1:  libuser-0_62-jp.po
-Source2:  libuser-0_62-zh-Hans.po
-Source3:  libuser-0_62-zh-Hant.po
+Source1:  libuser-0_62-ja.po
+Source2:  libuser-0_62-zh_CN.po
+Source3:  libuser-0_62-zh_TW.po
 Source4:  libuser-0_62-fr.po
 Source5:  libuser-0_62-it.po
 Source6:  libuser-0_62-de.po
@@ -42,6 +42,7 @@ Patch6: 0006-merge_ent_array_duplicates-Only-use-values-if-valid.patch
 Patch7: 0007-editing_open-close-fd-after-we-ve-established-its-va.patch
 Patch8: 0008-lgroupmod-Emit-AUDIT_GRP_CHAUTHTOK-not-AUDIT_GRP_MGM.patch
 Patch9: 0009-man-typo.patch
+Patch10: 0010-resource-leak.patch
 
 %description
 The libuser library implements a standardized interface for manipulating
@@ -77,18 +78,19 @@ administering user and group accounts.
 %prep
 %setup -q -n libuser-%{version}
 
-%patch1 -p1
-%patch2 -p1
-%patch3 -p1
-%patch4 -p1
-%patch5 -p1
-%patch6 -p1
-%patch7 -p1
-%patch8 -p1
-%patch9 -p1
+%patch -P 1 -p1
+%patch -P 2 -p1
+%patch -P 3 -p1
+%patch -P 4 -p1
+%patch -P 5 -p1
+%patch -P 6 -p1
+%patch -P 7 -p1
+%patch -P 8 -p1
+%patch -P 9 -p1
+%patch -P 10 -p1
 cp %{SOURCE1}  po/ja.po
-cp %{SOURCE2}  po/zh-Hans.po
-cp %{SOURCE3}  po/zh-Hant.po
+cp %{SOURCE2}  po/zh_CN.po
+cp %{SOURCE3}  po/zh_TW.po
 cp %{SOURCE4}  po/fr.po
 cp %{SOURCE5}  po/it.po
 cp %{SOURCE6}  po/de.po
@@ -107,8 +109,8 @@ autoreconf -if
 make
 # (make all) only rebuilds .gmo files if the .pot file is updated, regardless of po/ja.po changes
 make -C po ja.gmo
-make -C po zh-Hans.gmo
-make -C po zh-Hant.gmo
+make -C po zh_CN.gmo
+make -C po zh_TW.gmo
 make -C po it.gmo
 make -C po de.gmo
 make -C po ko.gmo
@@ -168,6 +170,10 @@ LC_ALL=C.UTF-8 python3 -c "import libuser"
 %{_datadir}/gtk-doc/html/*
 
 %changelog
+* Tue Jul 23 2024 Michal Hlavinka <mhlavink@redhat.com> - 0.62-26
+- fix findings from static application security testing (#RHEL-35578)
+- translation update (#RHEL-12111)
+
 * Tue Nov 29 2022 Tomas Halman <thalman@redhat.com> - 0.62-25
 - Man-page update
 - Resolves: rhbz#2070941 - small typo in lchage man page
