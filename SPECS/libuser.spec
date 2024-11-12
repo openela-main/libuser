@@ -1,12 +1,14 @@
 Name: libuser
 Version: 0.63
-Release: 13%{?dist}
+Release: 15%{?dist}
 License: LGPLv2+
 URL: https://pagure.io/libuser
 Source: http://releases.pagure.org/libuser/libuser-%{version}.tar.xz
 Patch0001: 0001-man-typo.patch
 Patch0002: 0002-popt-memopy.patch
 Patch0003: 0003-translation.patch
+Patch0004: 0004-resource-leak.patch
+Patch0005: 0005-translation-update.patch
 
 BuildRequires: glib2-devel
 BuildRequires: linuxdoc-tools
@@ -121,6 +123,14 @@ make
 %{_datadir}/gtk-doc/html/*
 
 %changelog
+* Tue May 7 2024 Tomas Halman <thalman@redhat.com> - 0.63-15
+- Update translations
+  Resolves: RHEL-12110
+
+* Mon May 6 2024 Tomas Halman <thalman@redhat.com> - 0.63-14
+- Fix findings from static application security testing
+  Resolves: RHEL-35693
+
 * Tue Jul 11 2023 Tomas Halman <thalman@redhat.com> - 0.63-13
 - Translation update
   Resolves: rhbz#2139662

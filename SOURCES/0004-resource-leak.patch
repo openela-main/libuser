@@ -1,0 +1,53 @@
+commit 009d9238317d152f524ee46c4be1ad2f93c47732
+Author: Jakub Hrozek <jakub.hrozek@posteo.se>
+Date:   Wed Sep 26 21:29:35 2018 +0200
+
+    lu_dispatch: Free tmp on failures
+    
+    Merges:
+    https://pagure.io/libuser/issue/23
+    
+    This makes the code slightly less compact with using an explicit
+    condition instead of the g_return_val_if_fail() shorthand, but freeing
+    tmp on failures.
+
+diff --git a/lib/user.c b/lib/user.c
+index ad2bb09..5709f41 100644
+--- a/lib/user.c
++++ b/lib/user.c
+@@ -980,7 +980,10 @@ lu_dispatch(struct lu_context *context,
+ 	case user_default:
+ 	case group_default:
+ 		/* Make sure we have both name and boolean here. */
+-		g_return_val_if_fail(sdata != NULL, FALSE);
++		if (sdata == NULL) {
++			free(tmp);
++			return FALSE;
++		}
+ 		/* Run the checks and preps. */
+ 		if (run_list(context, context->create_module_names,
+ 			    logic_and, id,
+@@ -1059,7 +1062,10 @@ lu_dispatch(struct lu_context *context,
+ 	case user_setpass:
+ 	case group_setpass:
+ 		/* Make sure we have a valid password. */
+-		g_return_val_if_fail(sdata != NULL, FALSE);
++		if (sdata == NULL) {
++			free(tmp);
++			return FALSE;
++		}
+ 		/* no break: fall through */
+ 	case user_removepass:
+ 	case group_removepass:
+@@ -1088,7 +1094,10 @@ lu_dispatch(struct lu_context *context,
+ 	case users_enumerate_by_group:
+ 	case groups_enumerate_by_user:
+ 		/* Make sure we have both name and ID here. */
+-		g_return_val_if_fail(sdata != NULL, FALSE);
++		if (sdata == NULL) {
++			free(tmp);
++			return FALSE;
++		}
+ 		if (id == users_enumerate_by_group)
+ 			ldata = convert_group_name_to_id(context, sdata,
+ 							 error);
