@@ -1,14 +1,17 @@
 Name: libuser
 Version: 0.63
-Release: 15%{?dist}
+Release: 16%{?dist}
 License: LGPLv2+
 URL: https://pagure.io/libuser
 Source: http://releases.pagure.org/libuser/libuser-%{version}.tar.xz
-Patch0001: 0001-man-typo.patch
-Patch0002: 0002-popt-memopy.patch
-Patch0003: 0003-translation.patch
-Patch0004: 0004-resource-leak.patch
-Patch0005: 0005-translation-update.patch
+Patch1: 0001-man-typo.patch
+Patch2: 0002-popt-memopy.patch
+Patch3: 0003-translation.patch
+Patch4: 0004-resource-leak.patch
+Patch5: 0005-translation-update.patch
+
+# allow 32char username as other tools, sent upstream, for <= 0.64, RHEL-55983
+Patch6: libuser-0.63-32ch_username.patch
 
 BuildRequires: glib2-devel
 BuildRequires: linuxdoc-tools
@@ -123,6 +126,9 @@ make
 %{_datadir}/gtk-doc/html/*
 
 %changelog
+* Wed Nov 06 2024 Michal Hlavinka <mhlavink@redhat.com> - 0.63-16
+- allow 32 char usernames (#RHEL-55983)
+
 * Tue May 7 2024 Tomas Halman <thalman@redhat.com> - 0.63-15
 - Update translations
   Resolves: RHEL-12110
