@@ -1,9 +1,11 @@
 Name: libuser
 Version: 0.64
-Release: 10%{?dist}
+Release: 11%{?dist}
 License: LGPL-2.0-or-later
 URL: https://pagure.io/libuser
 Source: libuser-%{version}.tar.gz
+# sent upstream, for <= 0.64, RHEL-85247
+Patch1:  libuser-0.64-editlocation.patch
 BuildRequires: glib2-devel
 BuildRequires: linuxdoc-tools
 BuildRequires: pam-devel
@@ -59,7 +61,8 @@ the libuser library, which provides a Python 3 API for manipulating and
 administering user and group accounts.
 
 %prep
-%autosetup -p 1
+%autosetup -N
+%patch -P 1 -p 1 -b .editlocation
 
 %build
 ./autogen.sh
@@ -115,6 +118,9 @@ export PYTHONPATH
 %{_datadir}/gtk-doc/html/*
 
 %changelog
+* Wed Apr 02 2025 Michal Hlavinka <mhlavink@redhat.com> - 0.64-11
+- create temporary edit files at symlink target location (RHEL-85247)
+
 * Wed Nov 06 2024 Michal Hlavinka <mhlavink@redhat.com> - 0.64-10
 - rebuild, fix FTBFS (#RHEL-65455)
 
