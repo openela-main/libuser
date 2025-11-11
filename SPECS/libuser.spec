@@ -1,6 +1,6 @@
 Name: libuser
 Version: 0.63
-Release: 16%{?dist}
+Release: 17%{?dist}
 License: LGPLv2+
 URL: https://pagure.io/libuser
 Source: http://releases.pagure.org/libuser/libuser-%{version}.tar.xz
@@ -12,6 +12,9 @@ Patch5: 0005-translation-update.patch
 
 # allow 32char username as other tools, sent upstream, for <= 0.64, RHEL-55983
 Patch6: libuser-0.63-32ch_username.patch
+
+# fix symlink being on different mount point than target, sent upstream, for <= 0.64, RHEL-85754
+Patch7: libuser-0.64-editlocation.patch
 
 BuildRequires: glib2-devel
 BuildRequires: linuxdoc-tools
@@ -126,6 +129,9 @@ make
 %{_datadir}/gtk-doc/html/*
 
 %changelog
+* Wed Apr 02 2025 Michal Hlavinka <mhlavink@redhat.com> - 0.63-17
+- create temporary edit files at symlink target location (RHEL-85754)
+
 * Wed Nov 06 2024 Michal Hlavinka <mhlavink@redhat.com> - 0.63-16
 - allow 32 char usernames (#RHEL-55983)
 
